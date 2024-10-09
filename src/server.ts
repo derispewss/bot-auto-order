@@ -1,4 +1,4 @@
-import makeWASocket, { useMultiFileAuthState, fetchLatestBaileysVersion, DisconnectReason, makeInMemoryStore, BaileysEventMap } from '@whiskeysockets/baileys';
+import makeWASocket, { useMultiFileAuthState, fetchLatestBaileysVersion, DisconnectReason, makeInMemoryStore } from '@whiskeysockets/baileys';
 import Pino from 'pino';
 import path from 'path';
 import qrcode from 'qrcode-terminal';

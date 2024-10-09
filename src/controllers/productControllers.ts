@@ -88,13 +88,7 @@ const updateProductStatus = async (codeProduct: string, newStatus: boolean): Pro
     }
 };
 
-const editProduct = async (
-    codeProduct: string, 
-    newProductName?: string, 
-    newProductDesc?: string, 
-    newProductPrice?: number, 
-    newStocks?: string[]
-): Promise<string> => {
+const editProduct = async (codeProduct: string, newProductName?: string, newProductDesc?: string, newProductPrice?: string): Promise<string> => {
     try {
         const dbPath = path.resolve(__dirname, '../../db/list-product.json');
         let productData: Product[] = [];
@@ -108,21 +102,19 @@ const editProduct = async (
         if (productIndex === -1) {
             return 'Error: Product not found.';
         }
-        if (newProductName) {
+        if (newProductName && newProductName !== '-') {
             productData[productIndex].productName = newProductName;
         }
-        if (newProductDesc) {
+        if (newProductDesc && newProductDesc !== '-') {
             productData[productIndex].productDesc = newProductDesc;
         }
-        if (newProductPrice !== undefined) {
-            productData[productIndex].productPrice = newProductPrice;
-        }
-        if (newStocks) {
-            const validStocks = newStocks.filter(stock => !isNaN(parseInt(stock)));
-            if (validStocks.length < 1 || validStocks.length > 10) {
-                return 'Error: Stocks must contain between 1 and 10 valid numeric items.';
+        if (newProductPrice && newProductPrice !== '-') {
+            const price = parseInt(newProductPrice);
+            if (!isNaN(price)) {
+                productData[productIndex].productPrice = price;
+            } else {
+                return 'Error: Invalid product price.';
             }
-            productData[productIndex].stocks = validStocks;
         }
         writeFileSync(dbPath, JSON.stringify(productData, null, 2), 'utf-8');
         return 'Product updated successfully!';

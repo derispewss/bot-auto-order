@@ -4,6 +4,7 @@ import { addProduct, deleteProduct, editProduct, getProductByCode, readProducts,
 import { readFileSync } from 'fs';
 import { formatUnixTimestamp, formatIDR } from '../utils/format';
 import path from 'path'
+import { P } from 'pino';
 
 // Config types
 interface Config {
@@ -195,7 +196,7 @@ module.exports = async (sock: WASocket, msg: proto.IWebMessageInfo) => {
                     `${prefix}delete <codeProduct> - Remove a product from the store.\n` +
                     `${prefix}updatestatus <codeProduct>|<status> - Change the status of a product (aktif or nonaktif).\n` +
                     `${prefix}edit <codeProduct>|<newProductName>|<newProductDesc>|<newProductPrice>|<newStocks> - Modify the name, description, price, or stock of a product.\n` +
-                    `${prefix}list - Get a list of all products in the store, including stock information.\n` +
+                    `${prefix}stock - Get a list of all products in the store, including stock information.\n` +
                     `${prefix}buyapp <codeProduct>|<metodePayment> - Buy an application available in the store and deduct stocks.\n`);
             } catch (error) {
                 reply('An error occurred while fetching help information.');
@@ -324,13 +325,11 @@ module.exports = async (sock: WASocket, msg: proto.IWebMessageInfo) => {
                     return;
                 }
                 if (!args.length) {
-                    await reply(`Usage: ${prefix}edit <codeProduct>|<newProductName>|<newProductDesc>|<newProductPrice>|<newStocks>`); // Added <newStocks> in usage
+                    await reply(`Usage: ${prefix}edit <codeProduct>|<newProductName>|<newProductDesc>|<newProductPrice> (use "-" to skip updating a parameter)`); 
                     return;
                 }
-                const [codeProduct, newProductName, newProductDesc, newProductPrice, newStocks] = q.split('|');
-                const price = newProductPrice ? parseInt(newProductPrice) : undefined;
-                const stocks = newStocks ? newStocks.split(',').map(stock => stock.trim()) : undefined;
-                const response = await editProduct(codeProduct, newProductName, newProductDesc, price, stocks);
+                const [codeProduct, newProductName, newProductDesc, newProductPrice] = q.split('|');
+                const response = await editProduct(codeProduct, newProductName, newProductDesc, newProductPrice);
                 await reply(response);
             } catch (error) {
                 console.error(error);
@@ -339,7 +338,7 @@ module.exports = async (sock: WASocket, msg: proto.IWebMessageInfo) => {
             break;
         }
         
-        case `${prefix}list`: {
+        case `${prefix}stock`: {
             try {
                 let products = await readProducts();
                 if (typeof products === 'string') {
@@ -385,6 +384,10 @@ module.exports = async (sock: WASocket, msg: proto.IWebMessageInfo) => {
     
         case `${prefix}buyapp`: {
             try {
+                if (isGroup) {
+                    await reply('This command is for personal chats only.');
+                    return;
+                }
                 const [codeProduct, metodePayment] = q.split('|').map(arg => arg.trim());
                 if (!codeProduct || !metodePayment) {
                     await reply(`Usage: ${prefix}buyapp <codeProduct>|<metodePayment (available payment method: 'saldo')>`);
@@ -393,6 +396,10 @@ module.exports = async (sock: WASocket, msg: proto.IWebMessageInfo) => {
                 const product = await getProductByCode(codeProduct);
                 if (typeof product === 'string') {
                     await reply(product);
+                    return;
+                }
+                if(!product.status) {
+                    await reply('products is unavailable, transaction failed!');
                     return;
                 }
                 if (metodePayment.toLowerCase() === 'saldo') {
